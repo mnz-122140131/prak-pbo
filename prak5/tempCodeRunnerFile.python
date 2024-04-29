@@ -1,0 +1,117 @@
+import pygame
+import random
+
+# Inheritance: Membuat kelas Snake sebagai turunan dari kelas pygame.Rect
+class Snake(pygame.Rect):
+    def __init__(self, x, y, size):
+        super().__init__(x, y, size[0], size[1])
+        self.color = (0, 255, 0)  # Warna snake
+        self.direction = "RIGHT"  # Arah awal snake
+        self.body = []
+
+    def move(self, screen_width, screen_height):
+        if self.direction == "UP":
+            self.y -= self.size[1]
+            if self.y < 0:  # Jika melewati batas atas frame
+                self.y = screen_height - self.size[1]  # Muncul di batas bawah frame
+        elif self.direction == "DOWN":
+            self.y += self.size[1]
+            if self.y >= screen_height:  # Jika melewati batas bawah frame
+                self.y = 0  # Muncul di batas atas frame
+        elif self.direction == "LEFT":
+            self.x -= self.size[0]
+            if self.x < 0:  # Jika melewati batas kiri frame
+                self.x = screen_width - self.size[0]  # Muncul di batas kanan frame
+        elif self.direction == "RIGHT":
+            self.x += self.size[0]
+            if self.x >= screen_width:  # Jika melewati batas kanan frame
+                self.x = 0  # Muncul di batas kiri frame
+
+        self.body.insert(0, list((self.x, self.y)))  # Menambahkan posisi kepala ke dalam tubuh
+
+    # Abstraction: Mengabstraksi deteksi tabrakan
+    def check_collision(self, screen_width, screen_height):
+        if self.x < 0 or self.x >= screen_width or self.y < 0 or self.y >= screen_height:
+            return True
+        for segment in self.body[1:]:
+            if segment == [self.x, self.y]:
+                return True
+        return False
+
+    # Polymorphism: Override metode draw untuk menyesuaikan dengan Snake
+    def draw(self, surface):
+        pygame.draw.rect(surface, self.color, self)
+
+# Encapsulation: Membuat kelas utama Game
+class Game:
+    def __init__(self):
+        self.screen_width = 400
+        self.screen_height = 400
+        self.block_size = (20, 20)  # Ukuran kotak sebagai tuple (panjang, lebar)
+        self.snake = Snake(self.screen_width // 2, self.screen_height // 2, self.block_size)
+        self.apple_pos = self.generate_apple_position()
+        self.game_over = False
+        self.time_limit = 60  # Waktu maksimum dalam detik
+        self.current_time = 0  # Waktu yang telah berlalu
+
+    def generate_apple_position(self):  # Definisikan metode generate_apple_position di sini
+        x = random.randint(0, (self.screen_width - self.block_size[0]) // self.block_size[0]) * self.block_size[0]
+        y = random.randint(0, (self.screen_height - self.block_size[1]) // self.block_size[1]) * self.block_size[1]
+        return x, y
+
+    def play_game(self):
+        pygame.init()
+        screen = pygame.display.set_mode((self.screen_width, self.screen_height))
+        pygame.display.set_caption("Snake Game")
+        clock = pygame.time.Clock()
+
+        while not self.game_over:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    self.game_over = True
+
+                elif event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_UP and self.snake.direction != "DOWN":
+                        self.snake.direction = "UP"
+                    elif event.key == pygame.K_DOWN and self.snake.direction != "UP":
+                        self.snake.direction = "DOWN"
+                    elif event.key == pygame.K_LEFT and self.snake.direction != "RIGHT":
+                        self.snake.direction = "LEFT"
+                    elif event.key == pygame.K_RIGHT and self.snake.direction != "LEFT":
+                        self.snake.direction = "RIGHT"
+
+            self.snake.move(self.screen_width, self.screen_height)
+
+            if self.snake.x == self.apple_pos[0] and self.snake.y == self.apple_pos[1]:
+                self.snake.body.append(list(self.apple_pos))
+                self.apple_pos = self.generate_apple_position()
+
+            if self.snake.check_collision(self.screen_width, self.screen_height):
+                self.game_over = True
+
+            # Perbarui waktu yang telah berlalu
+            self.current_time += 1
+
+            screen.fill((0, 0, 0))
+            self.snake.draw(screen)
+            pygame.draw.rect(screen, (255, 0, 0), pygame.Rect(self.apple_pos[0], self.apple_pos[1], self.block_size[0], self.block_size[1]))
+
+            # Tampilkan waktu mundur di layar
+            font = pygame.font.Font(None, 36)
+            time_text = font.render(f"Time left: {self.time_limit - self.current_time}", True, (255, 255, 255))
+            screen.blit(time_text, (10, 10))
+
+            # Cek apakah waktu sudah habis
+            if self.current_time >= self.time_limit:
+                self.game_over = True
+
+            pygame.display.flip()
+            clock.tick(10)
+
+        pygame.quit()
+
+
+# Main program
+if __name__ == "__main__":
+    game = Game()
+    game.play_game()
